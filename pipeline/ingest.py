@@ -147,7 +147,7 @@ def _ingest_documents(
 
     doc_iterator = tqdm(documents, desc="Processing documents", disable=not show_progress)
     for doc in doc_iterator:
-        chunks = chunking(doc["content"], embedding, method=settings.chunking_method)
+        chunks = chunking(doc["content"], embedding, method=settings.chunking_method,llm_model=settings.llm)
         if not chunks:
             continue
         total_nodes_generated += len(chunks)
