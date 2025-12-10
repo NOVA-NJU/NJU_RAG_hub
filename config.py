@@ -102,7 +102,7 @@ def load_settings(description: Optional[str] = None) -> Settings:
 
     )
 
-    chunking_method = _env("CHUNK_METHOD", default="simple_split")
+    chunking_method = _env("CHUNK_METHOD", default="semantic_split")
     sqlite_default = PROJECT_ROOT / "sqlite_db" / "sqlite.db"
 
     chroma_default = PROJECT_ROOT / "chroma_db"
