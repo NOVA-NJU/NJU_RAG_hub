@@ -140,6 +140,15 @@ def llm_split(
     **kwargs,
 ) -> List[str]:
     """使用 LLM 进行文本切分，确保返回 Python list 格式。"""
+    # 如果文本过长，调用 simple_split 和 llm_split 进行处理，确保返回一个扁平化列表
+    if len(text.strip()) >= 50000:
+        full_res = []
+        res = simple_split(text, max_length=20000)
+        for r in res:
+            resp = llm_split(r, llm_model, **kwargs)
+            full_res.extend(resp)  # 使用 extend 将结果扁平化
+        return full_res
+        
     title = kwargs.get("title", "无标题文档")
     prompt_template = kwargs.get(
         "prompt_template",
@@ -169,7 +178,7 @@ def llm_split(
     response = client.chat.completions.create(
         model=llm_model.model,
         messages=[
-            {"role": "system", "content": "你是一个文本处理专家。请直接python数组，不要有任何其他解释。"},
+            {"role": "system", "content": "你是一个文本处理专家。请直接输出python数组，不要有任何其他解释。"},
             {"role": "user","content": prompt}
         ],
         temperature=0.3,
