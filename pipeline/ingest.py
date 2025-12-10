@@ -7,6 +7,7 @@ import sqlite3
 from typing import Any, Dict, Iterable, Iterator, List, Sequence, Tuple
 
 import chromadb
+from tqdm import tqdm
 from llama_index.core import StorageContext, VectorStoreIndex
 from llama_index.core.schema import BaseNode, TextNode
 from llama_index.embeddings.openai import OpenAIEmbedding
@@ -144,7 +145,8 @@ def _ingest_documents(
     nodes: List[BaseNode] = []
     total_nodes_generated = 0
 
-    for doc in documents:
+    doc_iterator = tqdm(documents, desc="Processing documents", disable=not show_progress)
+    for doc in doc_iterator:
         chunks = chunking(doc["content"], embedding, method=settings.chunking_method)
         if not chunks:
             continue

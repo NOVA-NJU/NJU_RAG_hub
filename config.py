@@ -93,7 +93,6 @@ def load_settings(description: Optional[str] = None) -> Settings:
         api_key=_env("EMBEDDING_API_KEY", required=True),
         base_url=_env("EMBEDDING_BASE_URL", default="https://api.openai.com/v1"),
         model=_env("EMBEDDING_MODEL", required=True),
-
     )
 
     llm = LLMConfig(
