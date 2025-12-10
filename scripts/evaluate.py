@@ -5,6 +5,7 @@ import argparse
 import asyncio
 import logging
 import sqlite3
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Sequence
@@ -20,6 +21,7 @@ from ragas.metrics import answer_relevancy, context_precision, context_recall, f
 
 from config import load_settings
 from pipeline.query_router import build_rag
+
 
 
 class SingleResponseChatModel(BaseChatModel):
@@ -179,6 +181,7 @@ def run_evaluation(
 		model=settings.embedding.model,
 		api_key=settings.embedding.api_key,
 		base_url=settings.embedding.base_url,
+  		check_embedding_ctx_length = False,
 	)
 
 	evaluation = evaluate(
