@@ -169,7 +169,7 @@ def llm_split(
     response = client.chat.completions.create(
         model=llm_model.model,
         messages=[
-            {"role": "system", "content": "你是一个文本处理专家。请直接python数组，不要有任何其他解释。"},
+            {"role": "system", "content": "你是一个文本处理专家。请直接输出python数组，不要有任何其他解释。"},
             {"role": "user","content": prompt}
         ],
         temperature=0.3,
