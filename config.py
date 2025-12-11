@@ -114,11 +114,11 @@ def load_settings(description: Optional[str] = None) -> Settings:
     )
 
     runtime = RuntimeToggles(
-        similarity_top_k=int(os.getenv("SIMILARITY_TOP_K", "5")),
-        answer_context_k=int(os.getenv("ANSWER_CONTEXT_K", "5")),
+        similarity_top_k=int(os.getenv("SIMILARITY_TOP_K", "10")),
+        answer_context_k=int(os.getenv("ANSWER_CONTEXT_K", "10")),
         enable_focus_hints=_env_bool("ENABLE_FOCUS_HINTS", True),
         enable_time_filters=_env_bool("ENABLE_TIME_FILTERS", True),
-        llm_temperature=_env_float("LLM_TEMPERATURE", 0.7),
+        llm_temperature=_env_float("LLM_TEMPERATURE", 0.3),
     )
 
     desc = description or os.getenv("PROJECT_DESCRIPTION", "NJU RAG Hub Next")

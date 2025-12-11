@@ -17,6 +17,9 @@ def _handle_ingest(args: argparse.Namespace) -> None:
 	if args.doc_ids:
 		extra.append("--doc-ids")
 		extra.extend(args.doc_ids)
+	if args.doc_id_range:
+		extra.append("--doc-id-range")
+		extra.extend(map(str, args.doc_id_range))
 	if args.no_progress:
 		extra.append("--no-progress")
 	run_ingest(extra or None)
@@ -43,6 +46,7 @@ def build_parser() -> argparse.ArgumentParser:
 	ingest_parser = subparsers.add_parser("ingest", help="构建或刷新向量索引")
 	ingest_parser.add_argument("--force", action="store_true", help="全量重建索引")
 	ingest_parser.add_argument("--doc-ids", nargs="+", help="只刷新指定文档 ID")
+	ingest_parser.add_argument("--doc-id-range", nargs=2, type=int, metavar=("START", "END"), help="指定文档 ID 的范围（包含起始和结束 ID）")
 	ingest_parser.add_argument("--no-progress", action="store_true", help="关闭进度条")
 	ingest_parser.set_defaults(func=_handle_ingest)
 

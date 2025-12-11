@@ -236,11 +236,16 @@ def run_ingest(argv: Sequence[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Build or refresh the shared vector index")
     parser.add_argument("--force", action="store_true", help="重置知识库并全量重建")
     parser.add_argument("--doc-ids", nargs="+", help="仅刷新指定文档 ID")
+    parser.add_argument("--doc-id-range", nargs=2, type=int, metavar=('START', 'END'), help="指定文档 ID 的范围（包含起始和结束 ID）")
     parser.add_argument("--no-progress", action="store_true", help="关闭进度条输出")
     args = parser.parse_args(argv)
 
     settings = load_settings()
     target_ids = tuple(args.doc_ids) if args.doc_ids else None
+    if args.doc_id_range:
+        start, end = args.doc_id_range
+        target_ids = tuple(map(str, range(start, end + 1))) if not target_ids else target_ids + tuple(map(str, range(start, end + 1)))
+
     _, stats = build_index(
         settings,
         force=args.force,
