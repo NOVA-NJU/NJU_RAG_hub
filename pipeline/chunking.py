@@ -95,7 +95,7 @@ def chunking(
         llm_model = kwargs.get("llm_model")  # 确保 llm_model 定义
         if not llm_model:
             raise ValueError("llm_split 方法需要提供有效的 llm_model 参数")
-        result = llm_split(text, llm_model, **kwargs)
+        result = llm_split(text, **kwargs)
         _validate_chunks(result)
         return result
     else:
@@ -104,11 +104,10 @@ def chunking(
 def semantic_split(
     text: str,
     embed_model: BaseEmbedding,
-    llm_model: None = None,
-    *,
     threshold: float = 0.5,
     min_sentence_len: int = 20,
-    max_chunk_len: int = 6000,  # 新增参数：最大片段长度
+    max_chunk_len: int = 6000, 
+    **kwargs# 新增参数：最大片段长度
 ) -> List[str]:
     sentences = _split_sentences(text)
     if not sentences:
