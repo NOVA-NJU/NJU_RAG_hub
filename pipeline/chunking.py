@@ -23,11 +23,42 @@ except ImportError:  # pragma: no cover
 
 _SENTENCE_PATTERN = re.compile(r"(?<=[。！？!?])\s*")
 
-def _split_sentences(text: str) -> List[str]:
+def _split_sentences(text: str, max_length: int = 8192, overlap: int = 100) -> List[str]:
     sentences = [segment.strip() for segment in _SENTENCE_PATTERN.split(text) if segment and segment.strip()]
-    if sentences:
-        return sentences
+    processed_sentences = []
+    for sentence in sentences:
+        if len(sentence) > max_length:
+            processed_sentences.extend(split_long_sentence(sentence, max_length, overlap))
+        else:
+            processed_sentences.append(sentence)
+
+    if processed_sentences:
+        return processed_sentences
     return [text.strip()] if text else []
+
+def split_long_sentence(sentence: str, max_length: int, overlap: int) -> List[str]:
+    """
+    将过长的句子按照指定的最大长度和重叠长度切分。
+
+    Args:
+        sentence: 待切分的句子。
+        max_length: 每段的最大长度。
+        overlap: 每段之间的重叠长度。
+
+    Returns:
+        切分后的句子列表。
+    """
+    if len(sentence) <= max_length:
+        return [sentence]
+
+    chunks = []
+    start = 0
+    while start < len(sentence):
+        end = min(start + max_length, len(sentence))
+        chunks.append(sentence[start:end])
+        start = end - overlap if end - overlap > start else end
+
+    return chunks
 
 def chunking(
     text: str,
@@ -43,27 +74,41 @@ def chunking(
         method: 切分方法，可选 "semantic_split" 或 "simple_split"或"llm_split"。
         **kwargs: 传递给切分方法的额外参数。
     """
+    # 验证切分后的片段长度是否在范围内
+    def _validate_chunks(chunks: List[str]):
+        # 移除长度为0的片段
+        chunks[:] = [chunk for chunk in chunks if len(chunk) > 0]
+        for chunk in chunks:
+            if not (1 <= len(chunk) <= 8192):
+                raise ValueError(f"切分后的片段长度超出范围: {len(chunk)}")
+
+    # 在每种切分方法返回结果后进行验证
     if method == "semantic_split":
-        return semantic_split(text, embed_model, **kwargs)
+        result = semantic_split(text, embed_model, **kwargs)
+        _validate_chunks(result)
+        return result
     elif method == "simple_split":
-        return simple_split(text, **kwargs)
+        result = simple_split(text, **kwargs)
+        _validate_chunks(result)
+        return result
     elif method == "llm_split":
-        llm_model = kwargs.get("llm_model")
-        if "llm_model" in kwargs:
-            kwargs.pop("llm_model")
+        llm_model = kwargs.get("llm_model")  # 确保 llm_model 定义
         if not llm_model:
             raise ValueError("llm_split 方法需要提供有效的 llm_model 参数")
-        return llm_split(text, llm_model, **kwargs)
+        result = llm_split(text, llm_model, **kwargs)
+        _validate_chunks(result)
+        return result
     else:
         raise ValueError(f"未知的切分方法：{method}")
 
 def semantic_split(
     text: str,
     embed_model: BaseEmbedding,
+    llm_model: None = None,
     *,
     threshold: float = 0.5,
     min_sentence_len: int = 20,
-    max_chunk_len: int = 5000,  # 新增参数：最大片段长度
+    max_chunk_len: int = 6000,  # 新增参数：最大片段长度
 ) -> List[str]:
     sentences = _split_sentences(text)
     if not sentences:
@@ -104,8 +149,9 @@ def simple_split(
     text: str,
     **kwargs,
 ) -> List[str]:
-    """简单按长度切分文本，每段可以有重叠部分，默认每 5000 字为一段，重叠 500 字。"""
-    max_len = kwargs.get("max_len", 5000)  # 每段的最大长度
+    """简单按长度切分文本，每段可以有重叠部分，默认每 4000 字为一段，重叠 500 字。"""
+    # 确保每段的最大长度不超过 8192
+    max_len = min(kwargs.get("max_len", 6000), 8192)  # 每段的最大长度
     overlap = kwargs.get("overlap", 500)  # 重叠部分的长度
 
     if overlap >= max_len:
@@ -125,9 +171,16 @@ def simple_split(
             if current_chunk:
                 chunks.append("".join(current_chunk))
             # 创建新的块，包含重叠部分
-            current_chunk = current_chunk[-(overlap // len(current_chunk)):] if overlap > 0 else []
+            if overlap > 0 and current_chunk:
+                current_chunk = current_chunk[-(overlap // len(current_chunk)):] 
+            else:
+                current_chunk = []
             current_chunk.append(sentence)
             current_len = sum(len(s) for s in current_chunk)
+
+            # 确保重叠部分不会导致片段长度超出 max_len
+            if sum(len(s) for s in current_chunk) > max_len:
+                current_chunk = []
 
     if current_chunk:
         chunks.append("".join(current_chunk))
@@ -140,6 +193,15 @@ def llm_split(
     **kwargs,
 ) -> List[str]:
     """使用 LLM 进行文本切分，确保返回 Python list 格式。"""
+    # 如果文本过长，调用 simple_split 和 llm_split 进行处理，确保返回一个扁平化列表
+    if len(text.strip()) >= 50000:
+        full_res = []
+        res = simple_split(text, max_length=20000)
+        for r in res:
+            resp = llm_split(r, llm_model, **kwargs)
+            full_res.extend(resp)  # 使用 extend 将结果扁平化
+        return full_res
+        
     title = kwargs.get("title", "无标题文档")
     prompt_template = kwargs.get(
         "prompt_template",
@@ -154,7 +216,7 @@ def llm_split(
         5. 针对包含背景介绍和后续分点阐述的文本，切分时请确保每个分点片段都包含必要的背景信息，使其在脱离原文后依然语义完整。如果分点依赖于前文的背景，请在片段中补充该背景。
         6. **严禁**将时间、地点、人物等元数据信息单独切分为一个片段。这些信息必须与它们描述的具体事件或内容合并在一起。
         7. 避免生成过短的片段（例如少于50个字符），除非原文确实无法合并。
-        8.每一个分块不超过5000字。
+        8.每一个分块严格不超过5000字符。
 
         文档标题：{title}
         待切分文本：

@@ -18,6 +18,7 @@ from langchain_openai import OpenAIEmbeddings
 from openai import OpenAI
 from ragas import dataset_schema, evaluate
 from ragas.metrics import answer_relevancy, context_precision, context_recall, faithfulness
+from tqdm import tqdm
 
 from config import load_settings
 from pipeline.query_router import build_rag
@@ -131,7 +132,8 @@ def run_evaluation(
 	keyword_logs: List[str] = []
 	valid_indices: List[int] = []
 
-	for idx, question in enumerate(questions):
+	# Modify the evaluation loop to include a progress bar
+	for idx, question in enumerate(tqdm(questions, desc="Evaluating", unit="question")):
 		try:
 			result = rag.query(question)
 		except Exception as exc:  # pragma: no cover
