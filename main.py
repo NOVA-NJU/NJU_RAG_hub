@@ -8,6 +8,8 @@ from typing import Sequence
 from pipeline.ingest import run_ingest
 from pipeline.query_router import available_architectures, build_rag
 from scripts.evaluate import run_evaluation
+from scripts.evaluate_async import run_evaluation_async
+import asyncio
 
 
 def _handle_ingest(args: argparse.Namespace) -> None:
@@ -39,6 +41,19 @@ def _handle_eval(args: argparse.Namespace) -> None:
 	)
 
 
+def _handle_eval_async(args: argparse.Namespace) -> None:
+	result = asyncio.run(run_evaluation_async(
+		architecture=args.arch,
+		limit=args.limit,
+		output=args.output,
+		concurrency=args.concurrency
+	))
+	print(
+		"评测完成: 成功 %d 条，失败 %d 条，结果写入 %s"
+		% (result.success, result.failed, result.output_path)
+	)
+
+
 def build_parser() -> argparse.ArgumentParser:
 	parser = argparse.ArgumentParser(description="NJU RAG Hub Next CLI")
 	subparsers = parser.add_subparsers(dest="command", required=True)
@@ -61,6 +76,13 @@ def build_parser() -> argparse.ArgumentParser:
 	eval_parser.add_argument("--limit", type=int, default=10, help="评测样本数")
 	eval_parser.add_argument("--output", default="ragas_results.csv", help="输出 CSV 路径")
 	eval_parser.set_defaults(func=_handle_eval)
+
+	eval_async_parser = subparsers.add_parser("eval-async", help="基于 benchmark_qa 运行异步评测")
+	eval_async_parser.add_argument("--arch", default="standard", choices=available_architectures(), help="RAG 架构")
+	eval_async_parser.add_argument("--limit", type=int, default=10, help="评测样本数")
+	eval_async_parser.add_argument("--output", default="ragas_results.csv", help="输出 CSV 路径")
+	eval_async_parser.add_argument("--concurrency", type=int, default=5, help="并发请求数")
+	eval_async_parser.set_defaults(func=_handle_eval_async)
 
 	return parser
 
