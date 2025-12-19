@@ -37,6 +37,7 @@ NJU_RAG_hub_new/
 python main.py ingest --force         # 全量重建索引
 python main.py query "本周PBL学习组需要准备什么？"
 python main.py eval --limit 20 --output results.csv
+python main.py eval-async --limit 20 --concurrency 5 # 异步并发评测
 ```
 
 如需后续扩展（GraphRAG、LightRAG 等），只需在 `rag_architectures/` 中新增实现并调用 `register_architecture` 注册即可。
